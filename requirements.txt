@@ -1,0 +1,8 @@
+flask
+flask-cors
+deepface
+torch
+transformers
+numpy
+opencv-python
+Pillow
