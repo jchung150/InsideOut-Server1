@@ -12,7 +12,6 @@ import cv2
 
 app = Flask(__name__)
 CORS(app)
-
 class Assistant:
     def __init__(self):
         # Initialize CLIP model and processor
@@ -98,6 +97,8 @@ class Assistant:
         response = result.stdout.strip()
         return response
 
+assistant = Assistant()
+
 @app.route('/process', methods=['POST'])
 def process_request():
     data = request.get_json()
@@ -112,8 +113,6 @@ def process_request():
     })
 
 if __name__ == '__main__':
-    # Initialize your LLM model
-    assistant = Assistant()
 
     # Run the Flask app
     app.run(host='0.0.0.0', port=8888)
