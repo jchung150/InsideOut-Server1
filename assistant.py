@@ -55,20 +55,17 @@ class Assistant:
             
     def detect_emotion(self, frame):
         try:
-            # Use DeepFace to analyze the emotion
             result = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-            print("DeepFace Result:", result)  # Debugging statement
+            print("DeepFace Result:", result)
 
-            # Check if result is a list
             if isinstance(result, list):
                 result = result[0]  # Get the first dictionary from the list
 
             emotion = result['dominant_emotion'].lower()
-            print("Detected Emotion:", emotion)  # Debugging statement
+            print("Detected Emotion:", emotion)
 
-            # Map the emotion to a color
             color = self.emotion_color_map.get(emotion, "Unknown")
-            print("Mapped Color:", color)  # Debugging statement
+            print("Mapped Color:", color)
 
             return {"emotion": emotion.capitalize(), "color": color}
         except Exception as e:
@@ -76,8 +73,8 @@ class Assistant:
             return {"emotion": "Unknown", "color": "Unknown"}
 
     def _generate_response(self, prompt):
-        # Run Ollama command to get a response from the LLaMA model
-        ollama_path = "/usr/local/bin/ollama"
+        # ollama_path = "/usr/local/bin/ollama" # to use in the local environment
+        ollama_path = "/home/linuxbrew/.linuxbrew/bin/ollama"
         try:
             result = subprocess.run(
                 [ollama_path, "run", "llama3.1"],
@@ -95,7 +92,7 @@ class Assistant:
             return "I'm sorry, I'm unable to process your request at the moment."
 
 assistant = Assistant()
-user_api_counts = {}  # Dictionary to track API counts per user
+user_api_counts = {}
 
 @app.route('/process', methods=['POST'])
 def process_request():
@@ -119,7 +116,6 @@ def process_request():
     else:
         max_reached = False
 
-    # Process the request
     response_text, color = assistant.answer(prompt, image_base64)
 
     return jsonify({
@@ -130,6 +126,5 @@ def process_request():
     })
 
 if __name__ == '__main__':
-    # Run the Flask app
     app.run(host='0.0.0.0', port=8888)
 
