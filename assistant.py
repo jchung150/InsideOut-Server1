@@ -7,10 +7,24 @@ from deepface import DeepFace
 from PIL import Image
 import numpy as np
 import cv2
+import sqlite3
+
+def init_db():
+    conn = sqlite3.connect('api_counts.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS api_counts (
+            user_id TEXT PRIMARY KEY,
+            api_count INTEGER NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 app = Flask(__name__)
 CORS(app)
 
+init_db()
 class Assistant:
     def __init__(self):
         self.emotion_color_map = {
@@ -22,6 +36,17 @@ class Assistant:
             "neutral": "Gray",
             "surprise": "Yellow"
         }
+
+        # Replace 'model_name'
+        # model_name = "google/gemma-2-2b-it"
+
+        # try:
+        #     self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        #     self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        # except Exception as e:
+        #     print("Error loading model:", e)
+        #     print("Exiting...")
+        #     exit()
 
     def answer(self, prompt, image_base64):
         if not prompt:
@@ -77,7 +102,7 @@ class Assistant:
         ollama_path = "/home/linuxbrew/.linuxbrew/bin/ollama"
         try:
             result = subprocess.run(
-                [ollama_path, "run", "llama3.1"],
+                [ollama_path, "run", "llama3.2:1b"],
                 input=prompt,
                 capture_output=True,
                 text=True
@@ -107,11 +132,24 @@ def process_request():
         return jsonify({'error': 'No text provided.'}), 400
 
     # Update API call count for the user
-    user_api_counts[user_id] = user_api_counts.get(user_id, 0) + 1
-    count = user_api_counts[user_id]
+    conn = sqlite3.connect('api_counts.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT api_count FROM api_counts WHERE user_id = ?', (user_id,))
+    result = cursor.fetchone()
+
+    if result:
+        api_count = result[0] + 1
+        cursor.execute('UPDATE api_counts SET api_count = ? WHERE user_id = ?', (api_count, user_id))
+    else:
+        api_count = 1
+        cursor.execute('INSERT INTO api_counts (user_id, api_count) VALUES (?, ?)', (user_id, api_count))
+    
+    conn.commit()
+    conn.close()
 
     # Check if user has exceeded free API calls
-    if count > 20:
+    if api_count > 20:
         max_reached = True
     else:
         max_reached = False
@@ -121,10 +159,9 @@ def process_request():
     return jsonify({
         'response': response_text,
         'color': color,
-        'api_count': count,
+        'api_count': api_count,
         'max_reached': max_reached
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8888)
-
+    app.run(host='0.0.0.0', port=8282)
